@@ -14,37 +14,62 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 var configuration = builder.Configuration;
+var jwtKey = string.Empty;
+var jwtIssuer = string.Empty;
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    // JWT settings
+    jwtKey = configuration["Jwt:Key"];
+    jwtIssuer = configuration["Jwt:Issuer"];
+}
+else if (Environment.GetEnvironmentVariable("RENDER") != null)
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(Environment.GetEnvironmentVariable("AUTH_DB_CONNECTION_STRING")));
+
+    // JWT settings
+    jwtKey = Environment.GetEnvironmentVariable("JWT_AUTH_KEY");
+    jwtIssuer = Environment.GetEnvironmentVariable("JWT_AUTH_ISSUER");
+}
+else
+{
+    throw new Exception("No valid environment configuration found.");
+}
+
+if (jwtKey != null)
+{
+    builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// JWT settings
-var jwtKey = configuration["Jwt:Key"];
-var jwtIssuer = configuration["Jwt:Issuer"];
+    builder.Services.AddControllers();
 
-builder.Services.AddControllers();
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    builder.Services.AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+}
+else
+{
+    throw new Exception("JWT Key is not set in the environment variables.");
+}
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddAuthorization();
@@ -76,6 +101,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+if (Environment.GetEnvironmentVariable("RENDER") != null)
+{
+    // Read the PORT from environment variables (default: 5000)
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var app = builder.Build();
 
