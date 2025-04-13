@@ -1,6 +1,7 @@
 using AuthService.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace AuthService.Data;
 
@@ -19,9 +20,12 @@ public static class DataExtensions
                 var newUser = new ApplicationUser
                 {
                     UserName = "admin",
-                    Email = "admin@example.com"
+                    Email = "admin@example.com",
+                    RefreshToken = GenerateSecureRefreshToken(),
+                    RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7) // or however long you want it to last
                 };
-                await userManager.CreateAsync(newUser, "Admin@123"); // use a strong password
+
+                await userManager.CreateAsync(newUser, "Admin@123");
             }
         }
         return;
@@ -40,6 +44,16 @@ public static class DataExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"Migration failed: {ex.Message}");
+        }
+    }
+
+    private static string GenerateSecureRefreshToken()
+    {
+        var randomNumber = new byte[64];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
         }
     }
 }

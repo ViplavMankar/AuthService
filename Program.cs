@@ -117,8 +117,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-await app.CreateAdminUser();
 await app.MigrateDbAsync();
+await app.CreateAdminUser();
 
 app.UseHttpsRedirection();
 app.UseMiddleware<TokenLoggingMiddleware>();
