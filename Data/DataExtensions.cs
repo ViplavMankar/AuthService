@@ -1,5 +1,6 @@
 using AuthService.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Data;
 
@@ -24,5 +25,21 @@ public static class DataExtensions
             }
         }
         return;
+    }
+
+    public static async Task MigrateDbAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        try
+        {
+            await dbContext.Database.MigrateAsync();
+            Console.WriteLine("Database migration succeeded.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Migration failed: {ex.Message}");
+        }
     }
 }

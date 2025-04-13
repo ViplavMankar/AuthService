@@ -118,6 +118,7 @@ if (app.Environment.IsDevelopment())
 }
 
 await app.CreateAdminUser();
+await app.MigrateDbAsync();
 
 app.UseHttpsRedirection();
 app.UseMiddleware<TokenLoggingMiddleware>();

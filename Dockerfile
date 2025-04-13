@@ -10,7 +10,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy project files and restore dependencies
-COPY ["GameStore.Api.csproj", "./"]
+COPY ["AuthService.csproj", "./"]
 RUN dotnet restore "AuthService.csproj"
 
 # Create /app/data directory and set permissions
