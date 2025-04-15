@@ -75,9 +75,8 @@ namespace AuthService.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Login Error] {ex.Message} \n{ex.StackTrace}");
                 // Optional: log ex here using ILogger
-                return BadRequest("An error occurred during login. Please try again." + ex.Message + ex.StackTrace);
+                return BadRequest("An error occurred during login. Please try again.");
             }
         }
 
