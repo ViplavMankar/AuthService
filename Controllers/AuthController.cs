@@ -47,6 +47,10 @@ namespace AuthService.Controllers
                 if (user == null)
                     return Unauthorized("Invalid username or password.");
 
+                // 🚨 TEMP DEBUG — check if PasswordHash is missing
+                if (string.IsNullOrWhiteSpace(user.PasswordHash))
+                    return BadRequest("User exists, but password hash is empty. Registration might be broken.");
+
                 // Step 2: Validate the password
                 var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
                 if (!result.Succeeded)
