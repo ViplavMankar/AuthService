@@ -9,10 +9,6 @@ using AuthService.Services;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
 var configuration = builder.Configuration;
 var jwtKey = string.Empty;
 var jwtIssuer = string.Empty;
@@ -103,14 +99,12 @@ builder.Services.AddSwaggerGen(options =>
 
 if (Environment.GetEnvironmentVariable("RENDER") != null)
 {
-    // Read the PORT from environment variables (default: 5000)
     var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -122,7 +116,7 @@ await app.CreateAdminUser();
 
 app.UseHttpsRedirection();
 app.UseMiddleware<TokenLoggingMiddleware>();
-app.UseAuthentication(); // <-- this line is necessary for JWT auth
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
