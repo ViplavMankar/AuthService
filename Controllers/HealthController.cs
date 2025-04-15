@@ -15,7 +15,7 @@ namespace AuthService.Controllers
             _dbContext = dbContext;
         }
 
-        [HttpPost("health")]
+        [HttpGet("health")]
         public async Task<IActionResult> Health()
         {
             try
