@@ -26,16 +26,32 @@ namespace AuthService.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            SymmetricSecurityKey authSigningKey;
+            JwtSecurityToken token;
 
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                expires: DateTime.UtcNow.AddMinutes(15),
-                claims: authClaims,
-                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-            );
+            if (Environment.GetEnvironmentVariable("RENDER") == "true")
+            {
+                authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_AUTH_KEY")!));
+                token = new JwtSecurityToken(
+                    issuer: Environment.GetEnvironmentVariable("JWT_AUTH_ISSUER"),
+                    audience: Environment.GetEnvironmentVariable("JWT_AUTH_AUDIENCE"),
+                    expires: DateTime.UtcNow.AddMinutes(15),
+                    claims: authClaims,
+                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                );
+            }
+            else
+            {
+                authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
 
+                token = new JwtSecurityToken(
+                    issuer: _configuration["Jwt:Issuer"],
+                    audience: _configuration["Jwt:Audience"],
+                    expires: DateTime.UtcNow.AddMinutes(15),
+                    claims: authClaims,
+                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                );
+            }
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
@@ -55,16 +71,31 @@ namespace AuthService.Services
 
         public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
         {
-            var tokenValidationParameters = new TokenValidationParameters
+            TokenValidationParameters tokenValidationParameters;
+            if (Environment.GetEnvironmentVariable("RENDER") == "true")
             {
-                ValidateAudience = false,
-                ValidateIssuer = true,
-                ValidIssuer = _configuration["Jwt:Issuer"],
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])),
-                ValidateLifetime = false // important: we're extracting from *expired* token
-            };
-
+                tokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ValidateIssuer = true,
+                    ValidIssuer = Environment.GetEnvironmentVariable("JWT_AUTH_ISSUER"),
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_AUTH_KEY")!)),
+                    ValidateLifetime = false // important: we're extracting from *expired* token
+                };
+            }
+            else
+            {
+                tokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ValidateIssuer = true,
+                    ValidIssuer = _configuration["Jwt:Issuer"],
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])),
+                    ValidateLifetime = false // important: we're extracting from *expired* token
+                };
+            }
             var tokenHandler = new JwtSecurityTokenHandler();
             try
             {
