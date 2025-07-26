@@ -2,6 +2,9 @@ using AuthService.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using AuthService.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
+using System.Security.Claims;
 
 namespace AuthService.Controllers
 {
@@ -17,7 +20,8 @@ namespace AuthService.Controllers
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IConfiguration configuration, IJwtTokenService? jwtTokenService)
+            IConfiguration configuration,
+            IJwtTokenService? jwtTokenService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -132,5 +136,17 @@ namespace AuthService.Controllers
             return Ok("User logged out.");
         }
 
+        /// <summary>
+        /// STEP 1: Starts Google login by redirecting to Google's OAuth screen.
+        /// </summary>
+        [HttpGet("google/login")]
+        public IActionResult GoogleLogin()
+        {
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = "/signin-google"
+            };
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        }
     }
 }
