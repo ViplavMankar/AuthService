@@ -486,3 +486,4 @@ $RECYCLE.BIN/
 bin/
 obj/
 appsettings.Development.json
+run-https.sh
