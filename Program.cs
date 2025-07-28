@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using AuthService.Services;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -46,8 +49,9 @@ if (jwtKey != null)
 
     builder.Services.AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        // options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        // options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
@@ -60,6 +64,65 @@ if (jwtKey != null)
             ValidIssuer = jwtIssuer,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+        options.CallbackPath = "/signin-google";
+
+        options.SignInScheme = null;
+
+        options.Events.OnTicketReceived = async context =>
+        {
+            var email = context.Principal.FindFirstValue(ClaimTypes.Email);
+            var name = context.Principal.FindFirstValue(ClaimTypes.Name);
+
+            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+            var jwtService = context.HttpContext.RequestServices.GetRequiredService<IJwtTokenService>();
+
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString()
+                };
+                await userManager.CreateAsync(user);
+            }
+
+            var jwt = await jwtService.CreateToken(user);
+            var refreshToken = jwtService.GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken.Token;
+            user.RefreshTokenExpiryTime = refreshToken.Expires;
+            await userManager.UpdateAsync(user);
+
+            // Redirect to GameStoreWeb with tokens
+            var redirectUrl = "";
+            if (builder.Environment.IsDevelopment())
+                redirectUrl = $"https://localhost:7051/Account/Callback?token={jwt}&refreshToken={refreshToken.Token}";
+            else if (Environment.GetEnvironmentVariable("RENDER") != null)
+                redirectUrl = $"{Environment.GetEnvironmentVariable("GAMESTORE_URL")}Account/Callback?token={jwt}&refreshToken={refreshToken.Token}";
+            else
+            {
+                throw new Exception("No valid environment configuration found.");
+            }
+            context.Response.Redirect(redirectUrl);
+            context.HandleResponse();
+        };
+        // options.SignInScheme = IdentityConstants.ExternalScheme;
+
+        // options.Events.OnTicketReceived = context =>
+        // {
+        //     // After Google signs them in, redirect them to process the login
+        //     context.Response.Redirect("/api/auth/google/process");
+        //     context.HandleResponse(); // Prevent default
+        //     return Task.CompletedTask;
+        // };
     });
 }
 else

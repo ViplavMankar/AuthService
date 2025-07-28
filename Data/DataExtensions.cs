@@ -19,6 +19,7 @@ public static class DataExtensions
             {
                 var newUser = new ApplicationUser
                 {
+                    Id = (Guid.Empty).ToString(),
                     UserName = "admin",
                     Email = "admin@example.com",
                     RefreshToken = GenerateSecureRefreshToken(),
