@@ -15,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var jwtKey = string.Empty;
 var jwtIssuer = string.Empty;
+var clientId = string.Empty;
+var clientSecret = string.Empty;
+var redirectUrlBase = string.Empty;
 
 if (builder.Environment.IsDevelopment())
 {
@@ -24,6 +27,9 @@ if (builder.Environment.IsDevelopment())
     // JWT settings
     jwtKey = configuration["Jwt:Key"];
     jwtIssuer = configuration["Jwt:Issuer"];
+    clientId = configuration["Authentication:Google:ClientId"];
+    clientSecret = configuration["Authentication:Google:ClientSecret"];
+    redirectUrlBase = "https://localhost:7051/";
 }
 else if (Environment.GetEnvironmentVariable("RENDER") != null)
 {
@@ -33,6 +39,9 @@ else if (Environment.GetEnvironmentVariable("RENDER") != null)
     // JWT settings
     jwtKey = Environment.GetEnvironmentVariable("JWT_AUTH_KEY");
     jwtIssuer = Environment.GetEnvironmentVariable("JWT_AUTH_ISSUER");
+    clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+    clientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+    redirectUrlBase = Environment.GetEnvironmentVariable("GAMESTORE_URL");
 }
 else
 {
@@ -67,8 +76,8 @@ if (jwtKey != null)
     })
     .AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+        options.ClientId = clientId;
+        options.ClientSecret = clientSecret;
         options.CallbackPath = "/signin-google";
 
         options.SignInScheme = null;
@@ -104,7 +113,7 @@ if (jwtKey != null)
             // Redirect to GameStoreWeb with tokens
             var redirectUrl = "";
             if (builder.Environment.IsDevelopment())
-                redirectUrl = $"https://localhost:7051/Account/Callback?token={jwt}&refreshToken={refreshToken.Token}";
+                redirectUrl = $"{redirectUrlBase}Account/Callback?token={jwt}&refreshToken={refreshToken.Token}";
             else if (Environment.GetEnvironmentVariable("RENDER") != null)
                 redirectUrl = $"{Environment.GetEnvironmentVariable("GAMESTORE_URL")}Account/Callback?token={jwt}&refreshToken={refreshToken.Token}";
             else
